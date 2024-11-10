@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Link Finder</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        a {
+            color: #00BFFF;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Zoom Link Finder</h1>
+        <button id="fetchRooms">Fetch Zoom Rooms</button>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        document.getElementById('fetchRooms').addEventListener('click', fetchZoomRooms);
+
+        async function fetchZoomRooms() {
+            const urls = [
+                'https://beta.gamblersinrecovery.com/'
+                
+            ];
+
+            let zoomRooms = [];
+
+            for (const url of urls) {
+                const rooms = await fetchZoomRoomsFromUrl(url);
+                zoomRooms = zoomRooms.concat(rooms);
+            }
+
+            displayRooms(zoomRooms);
+        }
+
+        async function fetchZoomRoomsFromUrl(url) {
+            let zoomRooms = [];
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+
+                // Modify the selectors based on the actual HTML structure of the target page
+                const containers = doc.querySelectorAll('.meetingdiv001, .meetingdiv002');
+
+                containers.forEach(container => {
+                    const titleElement = container.querySelector('span[style*="font-size: 16px; font-weight: 600; color: #204060;"]');
+                    const title = titleElement ? titleElement.textContent.trim() : "No title available";
+                    const linkElement = container.querySelector('a[href]');
+                    const link = linkElement ? linkElement.href : "No link available";
+                    const buttonTextElement = container.querySelector('button');
+                    const buttonText = buttonTextElement ? buttonTextElement.textContent.trim() : "No password available";
+                    const password = buttonText.includes("–") ? buttonText.split("–").pop().trim() : "No password";
+                    const inProgress = container.querySelector('span[style*="padding-left:10px; padding-right:10px; font-size: 16px; font-weight: 600; color:white; background-color: #1f7a1f"]') !== null;
+
+                    if (link !== "No link available") {
+                        zoomRooms.push({ title, link, password, inProgress });
+                    }
+                });
+            } catch (error) {
+                console.error(`Could not fetch Zoom rooms from ${url}: ${error}`);
+            }
+            return zoomRooms;
+        }
+
+        function displayRooms(rooms) {
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = ''; // Clear previous output
+
+            if (rooms.length === 0) {
+                outputDiv.innerHTML = "No Zoom rooms found.";
+                return;
+            }
+
+            outputDiv.innerHTML = "<h2>Fetched Zoom Rooms:</h2>";
+            rooms.forEach(room => {
+                outputDiv.innerHTML += `
+                    <div>
+                        <strong>Title:</strong> ${room.title}<br>
+                        <strong>Link:</strong> <a href="${room.link}" target="_blank">${room.link}</a><br>
+                                                <strong>Password:</strong> ${room.password}<br>
+                        <strong>Active:</strong> ${room.inProgress ? '🟢 Yes' : '🔴 No'}
+                    </div>
+                    <hr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
